@@ -83,6 +83,7 @@ export const agentApi = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
         },
         body: JSON.stringify({ query: request.query }),
       }
@@ -124,7 +125,10 @@ export const agentApi = {
 
     fetch(streamUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
       body: JSON.stringify({ query }),
       signal: controller.signal,
     })
