@@ -212,7 +212,13 @@ export const agentApi = {
     dbConnectionId: string,
     query: string,
     signal?: AbortSignal
-  ): Promise<any> {
+  ): Promise<{
+    sql?: string;
+    summary?: string;
+    insights?: { title: string; description: string; significance: string }[];
+    chart_recommendations?: { title: string; chart_type: string; x_axis: string; y_axis: string; description: string }[];
+    error?: string;
+  }> {
     const payload = {
       prompt: {
         text: query,

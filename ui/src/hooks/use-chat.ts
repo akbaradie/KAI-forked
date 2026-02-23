@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useChatStore } from '@/stores/chat-store';
 import { agentApi } from '@/lib/api/agent';
-import type { AgentEvent, ChunkType } from '@/lib/api/types';
+
 
 export function useChat() {
   const abortRef = useRef<(() => void) | null>(null);
@@ -18,8 +18,7 @@ export function useChat() {
     appendToAssistantMessage,
     appendStructuredContent,
     updateProcessStatus,
-    updateTodos,
-    addEvent,
+
     finishAssistantMessage,
     setStreaming,
     clearMessages,
@@ -65,7 +64,7 @@ export function useChat() {
         }
 
         if (result.insights && result.insights.length > 0) {
-          const insightTexts = result.insights.map((i: any) =>
+          const insightTexts = result.insights.map((i: { title: string; description: string; significance: string }) =>
             `**${i.title}**\n${i.description}\n*Significance: ${i.significance}*`
           ).join('\n\n');
           appendStructuredContent(assistantId, 'insights', insightTexts + '\n');
@@ -75,9 +74,10 @@ export function useChat() {
           appendToAssistantMessage(assistantId, `\n\nError: ${result.error}`);
         }
 
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          appendToAssistantMessage(assistantId, `\n\nConnection error: ${error.message}`);
+      } catch (error) {
+        const err = error as Error;
+        if (err.name !== 'AbortError') {
+          appendToAssistantMessage(assistantId, `\n\nConnection error: ${err.message}`);
         }
       } finally {
         updateProcessStatus(assistantId, "Complete.");

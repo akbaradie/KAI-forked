@@ -105,7 +105,7 @@ with st.sidebar:
                     try:
                         res = requests.post(
                             f"{API_BASE}/api/v1/table-descriptions/sync-schemas",
-                            json={"table_description_ids": table_ids, "instruction": "Generate detailed descriptions for tables and columns"},
+                            json={"table_description_ids": table_ids, "instruction": "Buat deskripsi detail dari tabel atau kolom berikut"},
                             timeout=60
                         )
                         if res.status_code in [200, 201]:
