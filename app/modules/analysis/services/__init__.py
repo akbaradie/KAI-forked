@@ -149,7 +149,7 @@ class AnalysisService:
         )
 
         # Run SQL generation in thread pool (it's sync)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         with ThreadPoolExecutor() as executor:
             sql_generation = await loop.run_in_executor(
                 executor,
@@ -236,7 +236,7 @@ class AnalysisService:
         max_rows: int,
     ) -> list[dict]:
         """Execute SQL query asynchronously."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         with ThreadPoolExecutor() as executor:
             result = await loop.run_in_executor(
                 executor,

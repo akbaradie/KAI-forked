@@ -1,4 +1,5 @@
 """Session service for orchestrating graph and streaming."""
+import asyncio
 import json
 import logging
 import traceback
@@ -121,6 +122,8 @@ class SessionService:
         Stream query processing via SSE.
 
         Executes the session graph and yields SSE events.
+        Sends periodic heartbeat pings to prevent client timeout during
+        long-running LLM/SQL operations.
 
         Args:
             session_id: Session ID
@@ -156,34 +159,96 @@ class SessionService:
         }
 
         try:
-            # Stream events from LangGraph
-            final_state = None
-            async for event in self.graph.astream_events(
-                input_state,
-                config=config,
-                version="v2"
-            ):
-                sse_events = self._process_graph_event(event)
-                for sse_event in sse_events:
-                    yield sse_event
+            # Run LangGraph in a separate task so we can interleave heartbeat pings.
+            # Without heartbeats, clients (and proxies) drop the SSE connection after
+            # a few seconds of silence during long-running SQL/LLM operations.
+            #
+            # Queue item kinds:
+            #   ("event",    <sse_str>)      – a normal SSE event string to forward
+            #   ("done",     None)           – graph completed successfully
+            #   ("error",    (exc, tb_str))  – graph raised an exception
+            #   ("sentinel", <obj>)          – always last; signals the loop to exit
+            event_queue: asyncio.Queue = asyncio.Queue()
+            done_sentinel = object()
 
-                # Capture final state from chain end events
-                if event.get("event") == "on_chain_end":
-                    output = event.get("data", {}).get("output", {})
-                    if isinstance(output, dict) and output.get("messages"):
-                        final_state = output
+            async def _run_graph():
+                try:
+                    final_state = None
+                    async for event in self.graph.astream_events(
+                        input_state,
+                        config=config,
+                        version="v2"
+                    ):
+                        sse_events = self._process_graph_event(event)
+                        for sse_event in sse_events:
+                            await event_queue.put(("event", sse_event))
 
-            # Sync final state to session repository
-            await self._sync_state_to_session(session_id, final_state)
+                        # Capture final state from chain end events
+                        if event.get("event") == "on_chain_end":
+                            output = event.get("data", {}).get("output", {})
+                            if isinstance(output, dict) and output.get("messages"):
+                                final_state = output
 
-            # Final done event
-            yield self._format_sse("done", {
-                "session_id": session_id,
-                "status": "complete"
-            })
+                    # Sync final state to session repository
+                    await self._sync_state_to_session(session_id, final_state)
+                    await event_queue.put(("done", None))
+                except Exception as exc:
+                    # Capture the traceback HERE (inside the producer task) while
+                    # the exception context is still live.  The consumer side has no
+                    # meaningful traceback to format.
+                    tb_str = traceback.format_exc()
+                    await event_queue.put(("error", (exc, tb_str)))
+                finally:
+                    # Always ensure the consumer loop can exit
+                    await event_queue.put(("sentinel", done_sentinel))
+
+            graph_task = asyncio.create_task(_run_graph())
+
+            # Drain event queue and send heartbeat pings every 15 seconds
+            # so the client knows the connection is still alive.
+            HEARTBEAT_INTERVAL = 15  # seconds
+            try:
+                while True:
+                    try:
+                        kind, payload = await asyncio.wait_for(
+                            event_queue.get(),
+                            timeout=HEARTBEAT_INTERVAL
+                        )
+                    except asyncio.TimeoutError:
+                        # Send a comment-style SSE keepalive ping (RFC 6202 §5)
+                        yield ": ping\n\n"
+                        continue
+
+                    if kind == "sentinel":
+                        break
+                    elif kind == "event":
+                        yield payload
+                    elif kind == "done":
+                        yield self._format_sse("done", {
+                            "session_id": session_id,
+                            "status": "complete"
+                        })
+                    elif kind == "error":
+                        exc, tb_str = payload
+                        logger.error(f"Error in graph task for session {session_id}: {exc}")
+                        logger.error(tb_str)
+                        yield self._format_sse("error", {"message": str(exc)})
+            finally:
+                # Always cancel and clean up the background graph task.
+                # This covers three cases:
+                #   1. Normal completion  – task is already done, cancel() is a no-op
+                #   2. Error path         – task finished with exception, already done
+                #   3. Client disconnect  – GeneratorExit is raised, task must be cancelled
+                #      to avoid a dangling task holding DB connections / LLM calls
+                if not graph_task.done():
+                    graph_task.cancel()
+                    try:
+                        await graph_task
+                    except (asyncio.CancelledError, Exception):
+                        pass
 
         except Exception as e:
-            logger.error(f"Error streaming query: {e}")
+            logger.error(f"Error in stream_query for session {session_id}: {e}")
             logger.error(traceback.format_exc())
             yield self._format_sse("error", {"message": str(e)})
 
