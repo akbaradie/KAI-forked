@@ -29,9 +29,11 @@ export function useChat() {
     async (content: string) => {
       // Get current state directly from store to avoid stale closure
       const storeState = useChatStore.getState();
-      const { isStreaming: currentlyStreaming, sessionId: currentSessionId } = storeState;
+      const { isStreaming: currentlyStreaming, connectionId: currentConnectionId } = storeState;
 
-      if (!currentSessionId || currentlyStreaming) {
+      // We only need a DB connection to perform comprehensive analysis, not a session.
+      // But we still require one to be selected in the sidebar.
+      if (!currentConnectionId || currentlyStreaming) {
         return;
       }
 
@@ -39,99 +41,49 @@ export function useChat() {
       const assistantId = `assistant-${Date.now()}`;
       startAssistantMessage(assistantId);
 
-      const handleEvent = (event: AgentEvent) => {
-        addEvent(assistantId, event);
+      const controller = new AbortController();
+      abortRef.current = () => controller.abort();
 
-        switch (event.type) {
-          /**
-           * Backend sends SSE like:
-           *   event: chunk
-           *   data: {"type": "text", "content": "..."}
-           *
-           * agent.ts preserves the SSE event name as `type: "chunk"` and stores
-           * the inner "type" field from the JSON data as `chunk_type`.
-           */
-          case 'chunk': {
-            const innerType = event.chunk_type;
-            if (!event.content) break;
-            if (!innerType || innerType === 'text' || innerType === 'reasoning') {
-              appendToAssistantMessage(assistantId, event.content);
-            } else {
-              appendStructuredContent(assistantId, innerType, event.content);
-            }
-            break;
-          }
+      try {
+        updateProcessStatus(assistantId, "Analyzing your prompt and generating SQL...");
 
-          // Fallback: old agent.ts let the inner "type" overwrite the SSE event
-          // name, so some events arrive as type="text" instead of type="chunk".
-          // Keep these cases for backwards compatibility.
-          case 'text':
-          case 'reasoning':
-            if (event.content) {
-              appendToAssistantMessage(assistantId, event.content);
-            }
-            break;
+        const result = await agentApi.comprehensiveAnalysis(
+          currentConnectionId,
+          content,
+          controller.signal
+        );
 
-          case 'sql':
-          case 'summary':
-          case 'insights':
-          case 'chart_recommendations':
-            if (event.content) {
-              appendStructuredContent(assistantId, event.type as ChunkType, event.content);
-            }
-            break;
+        updateProcessStatus(assistantId, "Processing comprehensive analysis results...");
 
-          // Legacy token event (some older backend versions)
-          case 'token': {
-            if (!event.content) break;
-            const tokenChunkType = event.chunk_type;
-            if (tokenChunkType && tokenChunkType !== 'text') {
-              appendStructuredContent(assistantId, tokenChunkType, event.content);
-            } else {
-              appendToAssistantMessage(assistantId, event.content);
-            }
-            break;
-          }
-
-          case 'status':
-            if (event.message) {
-              updateProcessStatus(assistantId, event.message);
-            }
-            break;
-
-          case 'todo_update':
-            if (event.todos) {
-              updateTodos(event.todos);
-            }
-            break;
-
-          case 'done':
-            finishAssistantMessage(assistantId);
-            break;
-
-          case 'error':
-            appendToAssistantMessage(assistantId, `\n\nError: ${event.error || event.message}`);
-            finishAssistantMessage(assistantId);
-            break;
+        // Process the result JSON into the structured content parts the UI expects
+        if (result.sql) {
+          appendStructuredContent(assistantId, 'sql', result.sql + '\n');
         }
-      };
 
-      const handleError = (error: Error) => {
-        appendToAssistantMessage(assistantId, `\n\nConnection error: ${error.message}`);
+        if (result.summary) {
+          appendStructuredContent(assistantId, 'summary', result.summary + '\n');
+        }
+
+        if (result.insights && result.insights.length > 0) {
+          const insightTexts = result.insights.map((i: any) =>
+            `**${i.title}**\n${i.description}\n*Significance: ${i.significance}*`
+          ).join('\n\n');
+          appendStructuredContent(assistantId, 'insights', insightTexts + '\n');
+        }
+
+        if (result.error) {
+          appendToAssistantMessage(assistantId, `\n\nError: ${result.error}`);
+        }
+
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          appendToAssistantMessage(assistantId, `\n\nConnection error: ${error.message}`);
+        }
+      } finally {
+        updateProcessStatus(assistantId, "Complete.");
         finishAssistantMessage(assistantId);
-      };
-
-      const handleComplete = () => {
-        finishAssistantMessage(assistantId);
-      };
-
-      abortRef.current = agentApi.streamTask(
-        currentSessionId,
-        content,
-        handleEvent,
-        handleError,
-        handleComplete
-      );
+        abortRef.current = null;
+      }
     },
     [
       addUserMessage,
@@ -139,8 +91,6 @@ export function useChat() {
       appendToAssistantMessage,
       appendStructuredContent,
       updateProcessStatus,
-      updateTodos,
-      addEvent,
       finishAssistantMessage,
     ]
   );

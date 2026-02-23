@@ -207,4 +207,40 @@ export const agentApi = {
 
     return () => controller.abort();
   },
+
+  async comprehensiveAnalysis(
+    dbConnectionId: string,
+    query: string,
+    signal?: AbortSignal
+  ): Promise<any> {
+    const payload = {
+      prompt: {
+        text: query,
+        db_connection_id: dbConnectionId,
+        schemas: ["public"]
+      },
+      llm_config: {
+        model_family: "google",
+        model_name: "gemini-2.5-flash-lite"
+      },
+      max_rows: 100,
+      use_deep_agent: false
+    };
+
+    const response = await fetch(`${API_BASE}/api/v1/analysis/comprehensive`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Analysis failed: ${response.statusText} - ${text}`);
+    }
+
+    return response.json();
+  }
 };
