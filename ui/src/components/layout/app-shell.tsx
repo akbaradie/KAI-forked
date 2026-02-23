@@ -3,8 +3,6 @@
 import { useState, type ReactNode } from 'react';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export function AppShell({ children }: { children: ReactNode }) {
