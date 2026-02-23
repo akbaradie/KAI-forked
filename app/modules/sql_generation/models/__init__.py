@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 class LLMConfig(BaseModel):
     model_family: str = os.getenv("LLM_MODEL_FAMILY", "google")
-    model_name: str = os.getenv("LLM_NAME", "gemini-2.0-flash")
+    model_name: str = os.getenv("LLM_NAME", "gemini-2.5-flash-lite")
     api_base: str | None = None
 
 

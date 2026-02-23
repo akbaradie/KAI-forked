@@ -199,7 +199,7 @@ class DashboardPlannerService:
             model_name = llm_config.model_name
         else:
             model_family = self.settings.CHAT_FAMILY or "google"
-            model_name = self.settings.CHAT_MODEL or "gemini-2.0-flash"
+            model_name = self.settings.CHAT_MODEL or "gemini-2.5-flash-lite"
 
         return ChatModel().get_model(
             database_connection=None,

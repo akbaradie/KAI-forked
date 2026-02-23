@@ -71,7 +71,7 @@ def create_sql_generation(
     client: KAIAPIClient,
     prompt_id: str,
     llm_provider: str = "google",
-    llm_model: str = "gemini-2.0-flash-exp",
+    llm_model: str = "gemini-2.5-flash-lite",
     using_ner: bool = False,
     evaluate: bool = False,
 ) -> dict:
@@ -109,7 +109,7 @@ def create_prompt_and_sql(
     connection_id: str,
     text: str,
     llm_provider: str = "google",
-    llm_model: str = "gemini-2.0-flash-exp",
+    llm_model: str = "gemini-2.5-flash-lite",
 ) -> dict:
     """Create prompt and generate SQL in one call."""
     print_subsection("Creating prompt and generating SQL")

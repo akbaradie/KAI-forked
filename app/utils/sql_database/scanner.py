@@ -547,6 +547,9 @@ class SqlAlchemyScanner:
         scanner_service = PostgreSqlScanner()
         db_connection_id = table_descriptions[0].db_connection_id
 
+        if not llm_config:
+            llm_config = LLMConfig()
+
         inspect(db_engine)
         payload_table_descriptions = []
         for table in table_descriptions:

@@ -76,7 +76,7 @@ class FastAPI:
 
         # Get LLM for summarization (using Gemini)
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash", google_api_key=self._settings.GOOGLE_API_KEY
+            model="gemini-2.5-flash-lite", google_api_key=self._settings.GOOGLE_API_KEY
         )
 
         # Build graph

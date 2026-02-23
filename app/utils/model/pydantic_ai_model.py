@@ -36,7 +36,7 @@ def get_pydantic_ai_model_string(
     """
     settings = get_settings()
     family = model_family or settings.CHAT_FAMILY or "google"
-    model = model_name or settings.CHAT_MODEL or "gemini-2.0-flash"
+    model = model_name or settings.CHAT_MODEL or "gemini-2.5-flash-lite"
 
     if family == "google":
         return f"google-gla:{model}"
@@ -121,7 +121,7 @@ def get_pydantic_ai_model(
 
     if family == "google":
         from pydantic_ai.models.gemini import GeminiModel
-        model = model_name or settings.CHAT_MODEL or "gemini-2.0-flash"
+        model = model_name or settings.CHAT_MODEL or "gemini-2.5-flash-lite"
         return GeminiModel(model)
 
     elif family == "openai":
