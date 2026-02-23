@@ -162,9 +162,18 @@ export const agentApi = {
                 if (currentEvent.type && currentEvent.data) {
                   try {
                     const eventData = JSON.parse(currentEvent.data);
+                    // IMPORTANT: the SSE event name (currentEvent.type, e.g. "chunk") must
+                    // always take precedence over any "type" field inside the JSON payload.
+                    // Previously spreading eventData last let the payload's "type" field
+                    // (e.g. "text", "sql") silently overwrite the SSE event name.
+                    // We move the SSE type AFTER the spread so it wins, and we also
+                    // expose the inner type as "chunk_type" for consumers that need it.
+                    const innerType = eventData.type; // e.g. "text", "sql", "summary"
                     const agentEvent: import('./types').AgentEvent = {
-                      type: currentEvent.type as import('./types').AgentEvent['type'],
                       ...eventData,
+                      // Inner "type" (if present) becomes chunk_type; SSE event name is authoritative
+                      ...(innerType ? { chunk_type: innerType } : {}),
+                      type: currentEvent.type as import('./types').AgentEvent['type'],
                     };
                     onEvent(agentEvent);
                   } catch {

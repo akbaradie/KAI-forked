@@ -43,33 +43,55 @@ export function useChat() {
         addEvent(assistantId, event);
 
         switch (event.type) {
-          case 'token':
+          /**
+           * Backend sends SSE like:
+           *   event: chunk
+           *   data: {"type": "text", "content": "..."}
+           *
+           * agent.ts preserves the SSE event name as `type: "chunk"` and stores
+           * the inner "type" field from the JSON data as `chunk_type`.
+           */
+          case 'chunk': {
+            const innerType = event.chunk_type;
+            if (!event.content) break;
+            if (!innerType || innerType === 'text' || innerType === 'reasoning') {
+              appendToAssistantMessage(assistantId, event.content);
+            } else {
+              appendStructuredContent(assistantId, innerType, event.content);
+            }
+            break;
+          }
+
+          // Fallback: old agent.ts let the inner "type" overwrite the SSE event
+          // name, so some events arrive as type="text" instead of type="chunk".
+          // Keep these cases for backwards compatibility.
+          case 'text':
+          case 'reasoning':
             if (event.content) {
-              const chunkType = event.chunk_type as ChunkType;
-              if (chunkType && chunkType !== 'text') {
-                appendStructuredContent(assistantId, chunkType, event.content);
-              } else {
-                appendToAssistantMessage(assistantId, event.content);
-              }
+              appendToAssistantMessage(assistantId, event.content);
             }
             break;
 
-          // Structured chunk types from backend SSE
           case 'sql':
           case 'summary':
           case 'insights':
           case 'chart_recommendations':
-          case 'reasoning':
             if (event.content) {
               appendStructuredContent(assistantId, event.type as ChunkType, event.content);
             }
             break;
 
-          case 'text':
-            if (event.content) {
+          // Legacy token event (some older backend versions)
+          case 'token': {
+            if (!event.content) break;
+            const tokenChunkType = event.chunk_type;
+            if (tokenChunkType && tokenChunkType !== 'text') {
+              appendStructuredContent(assistantId, tokenChunkType, event.content);
+            } else {
               appendToAssistantMessage(assistantId, event.content);
             }
             break;
+          }
 
           case 'status':
             if (event.message) {
