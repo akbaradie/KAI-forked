@@ -88,7 +88,7 @@ class FastAPI:
         )
 
         # Create and configure service
-        service = SessionService(repository, graph, checkpointer)
+        service = SessionService(repository, graph, checkpointer, analysis_service=analysis_service)
         set_session_service(service)
 
         # Include session router

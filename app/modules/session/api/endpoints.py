@@ -149,5 +149,21 @@ async def query_session_stream(
         }
     )
 
+@router.post("/{session_id}/comprehensive-query")
+async def comprehensive_query_session(
+    session_id: str,
+    body: SessionQueryRequest,
+    service: SessionService = Depends(get_session_service)
+):
+    """
+    Execute comprehensive analysis on a session, saving the interaction to the session history.
+    """
+    try:
+        return await service.comprehensive_query(session_id, body.query)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 __all__ = ["router", "get_session_service", "set_session_service"]

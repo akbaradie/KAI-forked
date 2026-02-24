@@ -1,6 +1,7 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useChatStore } from '@/stores/chat-store';
 import { agentApi } from '@/lib/api/agent';
+import type { AgentSession, SessionMessage } from '@/lib/api/types';
 
 
 export function useChat() {
@@ -22,7 +23,45 @@ export function useChat() {
     finishAssistantMessage,
     setStreaming,
     clearMessages,
+    setMessages,
   } = useChatStore();
+
+  useEffect(() => {
+    if (!sessionId) {
+      clearMessages();
+      return;
+    }
+
+    let isMounted = true;
+    agentApi.getSession(sessionId).then((session: AgentSession) => {
+      if (!isMounted) return;
+
+      const hydratedMessages = (session.messages || []).map((m: SessionMessage) => {
+        if (m.role === 'human') {
+          return {
+            id: m.id,
+            role: 'user' as const,
+            content: m.query,
+            timestamp: new Date(m.timestamp)
+          };
+        } else {
+          return {
+            id: m.id,
+            role: 'assistant' as const,
+            content: '',
+            timestamp: new Date(m.timestamp),
+            structured: {
+              sql: m.sql || undefined,
+              summary: m.analysis || undefined
+            }
+          };
+        }
+      });
+      setMessages(hydratedMessages);
+    }).catch(err => console.error("Failed to load session history", err));
+
+    return () => { isMounted = false; };
+  }, [sessionId, clearMessages, setMessages]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -30,9 +69,9 @@ export function useChat() {
       const storeState = useChatStore.getState();
       const { isStreaming: currentlyStreaming, connectionId: currentConnectionId } = storeState;
 
-      // We only need a DB connection to perform comprehensive analysis, not a session.
-      // But we still require one to be selected in the sidebar.
-      if (!currentConnectionId || currentlyStreaming) {
+      // We need a DB connection AND a Session to perform comprehensive analysis and save history.
+      const currentSessionId = storeState.sessionId;
+      if (!currentConnectionId || !currentSessionId || currentlyStreaming) {
         return;
       }
 
@@ -46,8 +85,8 @@ export function useChat() {
       try {
         updateProcessStatus(assistantId, "Analyzing your prompt and generating SQL...");
 
-        const result = await agentApi.comprehensiveAnalysis(
-          currentConnectionId,
+        const result = await agentApi.sessionComprehensiveAnalysis(
+          currentSessionId,
           content,
           controller.signal
         );

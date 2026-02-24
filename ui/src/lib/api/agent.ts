@@ -248,5 +248,37 @@ export const agentApi = {
     }
 
     return response.json();
+  },
+
+  async sessionComprehensiveAnalysis(
+    sessionId: string,
+    query: string,
+    signal?: AbortSignal
+  ): Promise<{
+    sql?: string;
+    summary?: string;
+    insights?: { title: string; description: string; significance: string }[];
+    chart_recommendations?: { title: string; chart_type: string; x_axis: string; y_axis: string; description: string }[];
+    error?: string;
+  }> {
+    const payload = {
+      query
+    };
+
+    const response = await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/comprehensive-query`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Analysis failed: ${response.statusText} - ${text}`);
+    }
+
+    return response.json();
   }
 };

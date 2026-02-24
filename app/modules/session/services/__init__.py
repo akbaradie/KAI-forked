@@ -23,7 +23,8 @@ class SessionService:
         self,
         repository: SessionRepository,
         graph: Any,  # CompiledGraph
-        checkpointer: Any  # TypesenseCheckpointer
+        checkpointer: Any,  # TypesenseCheckpointer
+        analysis_service: Any = None  # AnalysisService
     ):
         """
         Initialize session service.
@@ -36,6 +37,7 @@ class SessionService:
         self.repository = repository
         self.graph = graph
         self.checkpointer = checkpointer
+        self.analysis_service = analysis_service
 
     async def create_session(
         self,
@@ -112,6 +114,74 @@ class SessionService:
             session_id: Session ID to close
         """
         await self.repository.close(session_id)
+
+    async def comprehensive_query(self, session_id: str, query: str) -> dict:
+        """
+        Execute comprehensive analysis and save it as a message in the session history.
+        """
+        from app.api.requests import PromptRequest
+        from app.modules.sql_generation.models import LLMConfig
+        from app.modules.session.models import Message
+        import uuid
+        
+        # 1. Get Session
+        session = await self.repository.get(session_id)
+        if not session:
+            raise ValueError(f"Session {session_id} not found")
+            
+        # 2. Append User Request Message immediately (optional if we only store AI pairs, but good for history)
+        # We'll just build the response dict and single AI Message containing everything.
+        
+        # 3. Call comprehensive analysis
+        if not self.analysis_service:
+            raise ValueError("AnalysisService not configured for SessionService")
+            
+        prompt_req = PromptRequest(
+            text=query,
+            db_connection_id=session.db_connection_id,
+            schemas=["public"]
+        )
+        
+        llm_config = LLMConfig(model_family="google", model_name="gemini-2.5-flash-lite")
+        analysis_result = await self.analysis_service.create_comprehensive_analysis(
+            prompt_request=prompt_req,
+            llm_config=llm_config,
+            max_rows=100,
+            use_deep_agent=False
+        )
+        
+        # 4. Generate AI Message based on results
+        # We need insights nicely formatted.
+        insights_md = "\n".join(
+            [f"- **{i.get('title', 'Insight')}**: {i.get('description', '')}" for i in analysis_result.get("insights", [])]
+        )
+        final_analysis = analysis_result.get("summary", "")
+        if insights_md:
+            final_analysis += "\n\n" + insights_md
+            
+        if analysis_result.get("error"):
+            final_analysis = f"Error: {analysis_result['error']}"
+
+        user_msg = Message(
+            id=str(uuid.uuid4()),
+            role="human",
+            query=query
+        )
+        
+        ai_msg = Message(
+            id=str(uuid.uuid4()),
+            role="assistant",
+            query=query,
+            sql=analysis_result.get("sql"),
+            results_summary=None,
+            analysis=final_analysis
+        )
+        
+        # Append and save
+        session.messages.extend([user_msg, ai_msg])
+        await self.repository.update(session)
+        
+        return analysis_result
 
     async def stream_query(
         self,

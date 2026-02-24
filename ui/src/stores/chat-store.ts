@@ -41,6 +41,7 @@ interface ChatState {
   finishAssistantMessage: (id: string) => void;
   setStreaming: (streaming: boolean) => void;
   clearMessages: () => void;
+  setMessages: (messages: ChatMessage[]) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -51,6 +52,7 @@ export const useChatStore = create<ChatState>((set) => ({
   isStreaming: false,
 
   setSession: (sessionId, connectionId) => set({ sessionId, connectionId, messages: [] }),
+  setMessages: (messages) => set({ messages }),
 
   addUserMessage: (content) => {
     const id = `user-${Date.now()}`;
