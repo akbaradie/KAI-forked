@@ -43,14 +43,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-w-0 flex-1 overflow-hidden">
       <SessionSidebar
         selectedSessionId={sessionId}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
       />
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         {!sessionId ? (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">
             Select or create a session to start chatting
@@ -63,8 +63,8 @@ export default function ChatPage() {
               </div>
             )}
 
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1 p-4 w-full">
+              <div className="space-y-4 w-full min-w-0">
                 {messages.map((message) => (
                   <AgentMessage key={message.id} message={message} />
                 ))}

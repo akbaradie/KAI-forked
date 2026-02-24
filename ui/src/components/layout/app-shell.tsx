@@ -9,7 +9,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     return (
-        <div className="flex h-screen">
+        <div className="flex h-screen w-full overflow-hidden">
             {/* Collapsible nav sidebar */}
             <div
                 className={cn(
@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     isSidebarOpen={isSidebarOpen}
                     onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
                 />
-                <main className="flex-1 overflow-hidden">
+                <main className="flex-1 overflow-hidden min-w-0">
                     {children}
                 </main>
             </div>

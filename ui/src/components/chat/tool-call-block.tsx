@@ -38,7 +38,7 @@ export function ToolCallBlock({ event, result }: ToolCallBlockProps) {
           {event.input && (
             <div className="mb-2">
               <div className="font-medium text-muted-foreground">Input:</div>
-              <pre className="mt-1 overflow-x-auto rounded bg-background p-2">
+              <pre className="mt-1 overflow-x-auto rounded bg-background p-2 max-w-full whitespace-pre-wrap break-all">
                 {JSON.stringify(event.input, null, 2)}
               </pre>
             </div>
@@ -46,7 +46,7 @@ export function ToolCallBlock({ event, result }: ToolCallBlockProps) {
           {result?.output && (
             <div>
               <div className="font-medium text-muted-foreground">Output:</div>
-              <pre className="mt-1 max-h-40 overflow-auto rounded bg-background p-2">
+              <pre className="mt-1 max-h-40 overflow-auto rounded bg-background p-2 max-w-full whitespace-pre-wrap break-all">
                 {typeof result.output === 'string'
                   ? result.output.slice(0, 500)
                   : JSON.stringify(result.output, null, 2).slice(0, 500)}

@@ -130,10 +130,10 @@ export function AgentMessage({ message }: AgentMessageProps) {
     return (
       <div className="flex justify-end gap-3">
         <div className="max-w-[80%] rounded-2xl rounded-tr-none bg-primary px-5 py-3 text-primary-foreground shadow-sm">
-          <p className="leading-relaxed">{message.content}</p>
+          <p className="leading-relaxed break-words whitespace-pre-wrap">{message.content}</p>
         </div>
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
-            <User className="h-5 w-5 text-primary" />
+          <User className="h-5 w-5 text-primary" />
         </div>
       </div>
     );
@@ -142,10 +142,10 @@ export function AgentMessage({ message }: AgentMessageProps) {
   return (
     <div className="flex gap-4">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 mt-1">
-          <Bot className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+        <Bot className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
       </div>
 
-      <div className="flex-1 space-y-3 overflow-hidden">
+      <div className="flex-1 space-y-3 overflow-hidden min-w-0">
         {/* Process status indicator during streaming */}
         {message.isStreaming && structured?.processStatus && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -175,7 +175,7 @@ export function AgentMessage({ message }: AgentMessageProps) {
 
         {/* Summary/Answer Block */}
         {(displayContent || structured?.summary || structured?.reasoning) && (
-          <div className="prose prose-sm dark:prose-invert max-w-none rounded-xl border bg-card/50 px-5 py-4 shadow-sm">
+          <div className="prose prose-sm dark:prose-invert max-w-none break-words overflow-x-auto rounded-xl border bg-card/50 px-5 py-4 shadow-sm">
             <ReactMarkdown>
               {structured?.summary || displayContent || structured?.reasoning || ''}
             </ReactMarkdown>

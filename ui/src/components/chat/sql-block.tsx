@@ -45,7 +45,7 @@ export function SqlBlock({ sql, className }: SqlBlockProps) {
           )}
         </Button>
       </div>
-      <pre className="p-4 overflow-x-auto text-sm">
+      <pre className="p-4 overflow-x-auto text-sm max-w-full whitespace-pre-wrap break-all">
         <code className="language-sql">{sql}</code>
       </pre>
     </div>

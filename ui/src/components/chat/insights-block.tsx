@@ -16,7 +16,7 @@ export function InsightsBlock({ insights, className }: InsightsBlockProps) {
         <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
         <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Key Insights</span>
       </div>
-      <div className="p-4 prose prose-sm dark:prose-invert max-w-none prose-amber">
+      <div className="p-4 prose prose-sm dark:prose-invert max-w-none prose-amber break-words overflow-x-auto">
         <ReactMarkdown>{insights}</ReactMarkdown>
       </div>
     </div>
@@ -35,7 +35,7 @@ export function ChartRecommendationsBlock({ recommendations, className }: ChartR
         <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Visualization Recommendations</span>
       </div>
-      <div className="p-4 prose prose-sm dark:prose-invert max-w-none prose-blue">
+      <div className="p-4 prose prose-sm dark:prose-invert max-w-none prose-blue break-words overflow-x-auto">
         <ReactMarkdown>{recommendations}</ReactMarkdown>
       </div>
     </div>

@@ -53,7 +53,7 @@ export function SessionSidebar({
   };
 
   return (
-    <div className="flex h-full w-64 flex-col border-r">
+    <div className="flex h-full w-64 shrink-0 flex-col border-r">
       <div className="space-y-2 border-b p-3">
         <Select value={connectionId} onValueChange={setConnectionId}>
           <SelectTrigger>
