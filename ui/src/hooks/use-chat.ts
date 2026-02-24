@@ -52,7 +52,8 @@ export function useChat() {
             timestamp: new Date(m.timestamp),
             structured: {
               sql: m.sql || undefined,
-              summary: m.analysis || undefined
+              summary: m.analysis || undefined,
+              insights: m.results_summary || undefined
             }
           };
         }

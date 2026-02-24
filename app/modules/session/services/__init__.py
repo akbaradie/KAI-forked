@@ -150,17 +150,16 @@ class SessionService:
             use_deep_agent=False
         )
         
-        # 4. Generate AI Message based on results
-        # We need insights nicely formatted.
+        # 4. Store summary and insights SEPARATELY so they can be correctly
+        # hydrated into distinct StructuredContent fields when reloading history.
+        summary_text = analysis_result.get("summary", "")
         insights_md = "\n".join(
             [f"- **{i.get('title', 'Insight')}**: {i.get('description', '')}" for i in analysis_result.get("insights", [])]
         )
-        final_analysis = analysis_result.get("summary", "")
-        if insights_md:
-            final_analysis += "\n\n" + insights_md
-            
+        
         if analysis_result.get("error"):
-            final_analysis = f"Error: {analysis_result['error']}"
+            summary_text = f"Error: {analysis_result['error']}"
+            insights_md = ""
 
         user_msg = Message(
             id=str(uuid.uuid4()),
@@ -173,8 +172,8 @@ class SessionService:
             role="assistant",
             query=query,
             sql=analysis_result.get("sql"),
-            results_summary=None,
-            analysis=final_analysis
+            results_summary=insights_md or None,   # insights stored here
+            analysis=summary_text or None           # summary stored here
         )
         
         # Append and save
